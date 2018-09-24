@@ -58,6 +58,10 @@ func (c *Client) NewRequest(method, urlStr string, params url.Values) (*http.Req
 		return nil, err
 	}
 
+	if c.UserAgent != "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
+
 	return req, nil
 }
 
@@ -79,6 +83,10 @@ func (c *Client) NewRequestWithAuth(method, urlStr string, params url.Values) (*
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Key", c.AuthConfig.APIkey)
 	req.Header.Set("Sign", MakeHMAC(encParams, c.AuthConfig.APISecret))
+
+	if c.UserAgent != "" {
+		req.Header.Set("User-Agent", c.UserAgent)
+	}
 
 	return req, nil
 }
