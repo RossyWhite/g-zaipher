@@ -13,8 +13,12 @@ type TradeService struct {
 }
 
 type Info struct {
-	Info2
-	TradeCount int `json:"trade_count"`
+	Funds      map[string]float64 `json:"funds"`
+	Deposit    map[string]float64 `json:"deposit"`
+	Rights     map[string]int     `json:"rights"`
+	OpenOrders int                `json:"open_orders"`
+	ServerTime int                `json:"server_time"`
+	TradeCount int                `json:"trade_count"`
 }
 
 func (s *TradeService) GetInfo() (*Info, *http.Response, error) {
@@ -125,18 +129,14 @@ type TradeHistory struct {
 	Comment      string  `json:"comment"`
 }
 
-type HistoryOpts struct {
-	From   int
-	Count  int
-	FromID int
-	EndID  int
-	Order  string
-	Since  int
-	End    int
-}
-
 type TradeHistoryOpts struct {
-	HistoryOpts
+	From         int
+	Count        int
+	FromID       int
+	EndID        int
+	Order        string
+	Since        int
+	End          int
 	CurrencyPair string
 }
 
@@ -162,19 +162,22 @@ func (s *TradeService) TradeHistory(opts *TradeHistoryOpts) (map[string]TradeHis
 }
 
 type ActiveOrder struct {
-	CurrencyPair string `json:"currency_pair"`
-	Action       string `json:"action"`
-	Amount       string `json:"amount"`
-	Price        int    `json:"price"`
-	Timestamp    string `json:"timestamp"`
-	Comment      string `json:"comment"`
+	CurrencyPair string  `json:"currency_pair"`
+	Action       string  `json:"action"`
+	Amount       float64 `json:"amount"`
+	Price        float64 `json:"price"`
+	Timestamp    string  `json:"timestamp"`
+	Comment      string  `json:"comment"`
 }
 
-func (s *TradeService) ActiveOrders(currencyPair string) (map[string]ActiveOrder, *http.Response, error) {
+type ActiveOrdersOpts struct {
+	CurrencyPair string
+}
+
+func (s *TradeService) ActiveOrders(opts *ActiveOrdersOpts) (map[string]ActiveOrder, *http.Response, error) {
 	path := tradePath
-	params := url.Values{}
+	params := AddOptions(opts)
 	params.Add("method", "active_orders")
-	params.Add("currency_pair", currencyPair)
 
 	req, err := s.client.NewRequestWithAuth("POST", path, params)
 	if err != nil {
@@ -229,6 +232,37 @@ func (s *TradeService) Trade(currencyPair, action string, price, amount float64,
 	return result, resp, nil
 }
 
+type CancelResult struct {
+	OrderID int                `json:"order_id"`
+	Funds   map[string]float64 `json:"funds"`
+}
+
+type CancelOrderOpts struct {
+	CurrencyPair string
+}
+
+func (s *TradeService) CancelOrder(orderID int, opts *CancelOrderOpts) (*CancelResult, *http.Response, error) {
+	path := tradePath
+	params := AddOptions(opts)
+	params.Add("method", "cancel_order")
+	params.Add("order_id", strconv.Itoa(orderID))
+
+	req, err := s.client.NewRequestWithAuth("POST", path, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	result := &CancelResult{}
+	data := &ResponseEnvelop{Return: result}
+	resp, err := s.client.Do(req, data)
+	if err != nil {
+		return nil, resp, err
+	}
+
+	return result, resp, nil
+
+}
+
 type WithdrawResult struct {
 	ID    int                `json:"id"`
 	TxID  string             `json:"txid"`
@@ -266,18 +300,24 @@ func (s *TradeService) WithDraw(currencyPair, address string, amount float64,
 	return result, resp, nil
 }
 
-type depositAndWithdrawHistory struct {
-	Timestamp int     `json:"timestamp"`
+type DepositHistory struct {
+	Timestamp string  `json:"timestamp"`
 	Address   string  `json:"address"`
 	Amount    float64 `json:"amount"`
 	TxID      string  `json:"txid"`
 }
 
-type DepositHistory struct {
-	depositAndWithdrawHistory
+type DepositHistoryOpts struct {
+	From   int
+	Count  int
+	FromID int
+	EndID  int
+	Order  string
+	Since  int
+	End    int
 }
 
-func (s *TradeService) DepositHistory(currency string, opts *HistoryOpts) (map[string]DepositHistory, *http.Response, error) {
+func (s *TradeService) DepositHistory(currency string, opts *DepositHistoryOpts) (map[string]DepositHistory, *http.Response, error) {
 	path := tradePath
 	params := AddOptions(opts)
 	params.Add("method", "deposit_history")
@@ -300,10 +340,23 @@ func (s *TradeService) DepositHistory(currency string, opts *HistoryOpts) (map[s
 }
 
 type WithdrawHistory struct {
-	depositAndWithdrawHistory
+	Timestamp string  `json:"timestamp"`
+	Address   string  `json:"address"`
+	Amount    float64 `json:"amount"`
+	TxID      string  `json:"txid"`
 }
 
-func (s *TradeService) WithdrawHistory(currency string, opts *HistoryOpts) (map[string]WithdrawHistory, *http.Response, error) {
+type WithdrawHistoryOpts struct {
+	From   int
+	Count  int
+	FromID int
+	EndID  int
+	Order  string
+	Since  int
+	End    int
+}
+
+func (s *TradeService) WithdrawHistory(currency string, opts *WithdrawHistoryOpts) (map[string]WithdrawHistory, *http.Response, error) {
 	path := tradePath
 	params := AddOptions(opts)
 	params.Add("method", "withdraw_history")

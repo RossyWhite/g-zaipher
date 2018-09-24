@@ -22,8 +22,8 @@ type Client struct {
 	UserAgent  string
 
 	// services
-	Public        *PublicService
-	Trade         *TradeService
+	Public *PublicService
+	Trade  *TradeService
 }
 
 type Config struct {
@@ -104,6 +104,11 @@ func (c *Client) Do(req *http.Request, v interface{}) (*http.Response, error) {
 
 func AddOptions(params interface{}) url.Values {
 	values := url.Values{}
+
+	if params == nil || reflect.ValueOf(params).IsNil() {
+		return values
+	}
+
 	iVal := reflect.ValueOf(params).Elem()
 	typ := iVal.Type()
 
@@ -129,7 +134,7 @@ func AddOptions(params interface{}) url.Values {
 		case string:
 			v = f.String()
 		}
-		values.Set(ToSnakeCase(typ.Field(i).Name), v)
+		values.Set(toSnakeCase(typ.Field(i).Name), v)
 	}
 
 	return values
@@ -163,7 +168,7 @@ func checkApiError(d *json.Decoder) (*json.RawMessage, error) {
 	return &raw, nil
 }
 
-func ToSnakeCase(in string) string {
+func toSnakeCase(in string) string {
 	runes := []rune(in)
 
 	var out []rune
